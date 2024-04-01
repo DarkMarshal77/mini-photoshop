@@ -1,20 +1,23 @@
-import sys
-
 from PyQt6 import QtWidgets, QtGui, QtCore
+
+import Core.FunctionHandler
 
 
 class MyMainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
+    def __init__(self, core: Core.FunctionHandler.Handler):
         super().__init__()
 
         self.resize(800, 615)
+        self.installEventFilter(self)
 
         self._create_menubar()
         self._create_central()
 
-        self.image_path = ""
+        self.raw_img = None
+        self.core = core
 
         self.show()
+        self._open_file()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -87,20 +90,30 @@ class MyMainWindow(QtWidgets.QMainWindow):
         menuOptional_Operations = menubar.addMenu('&Optional Operations')
 
     def _open_file(self):
-        # Handle the file opening logic here
-        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
-                                                             "BMP Files (*.bmp);;All Files (*)")
+        # file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
+        #                                                      "BMP Files (*.bmp);;All Files (*)")
+        file_name = "input/image1.bmp"
         if file_name:
-            self.image_path = file_name
-            self.terminal.setText(file_name)
-            pixmap = QtGui.QPixmap(file_name)
+            self.raw_img, height, width = self.core.read_image(file_name)
+            qimage = QtGui.QImage(self.raw_img, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
+
             self.image_viewer.setPixmap(
-                pixmap.scaled(self.image_viewer.size(), aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+                QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
+                                                       int(self.image_viewer.height() * 0.9),
+                                                       aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
             self.image_thumbnail.setPixmap(
-                pixmap.scaled(self.image_thumbnail.size(), aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+                QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_thumbnail.width() * 0.9),
+                                                       int(self.image_thumbnail.height() * 0.9),
+                                                       aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
 
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    window = MyMainWindow()
-    sys.exit(app.exec())
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.Type.Resize:
+            self.image_viewer.setPixmap(
+                self.image_viewer.pixmap().scaled(
+                    int(self.image_viewer.width() * 0.9), int(self.image_viewer.height() * 0.9),
+                    aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+            self.image_thumbnail.setPixmap(
+                self.image_thumbnail.pixmap().scaled(
+                    int(self.image_thumbnail.width() * 0.9), int(self.image_thumbnail.height() * 0.9),
+                    aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+        return super().eventFilter(obj, event)
