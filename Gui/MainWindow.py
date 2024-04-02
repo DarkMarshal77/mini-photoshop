@@ -1,10 +1,10 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
 
-import Core.FunctionHandler
+from Core import File, Color
 
 
 class MyMainWindow(QtWidgets.QMainWindow):
-    def __init__(self, core: Core.FunctionHandler.Handler):
+    def __init__(self):
         super().__init__()
 
         self.resize(800, 615)
@@ -14,10 +14,10 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self._create_central()
 
         self.raw_img = None
-        self.core = core
 
         self.show()
         self._open_file()
+        self._grayscale()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -79,7 +79,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         menuCore_Operations = menubar.addMenu('&Core Operations')
         menuCore_Operations.addAction(QtGui.QAction('&Open File', self, triggered=self._open_file))
         menuCore_Operations.addSeparator()
-        menuCore_Operations.addAction(QtGui.QAction('&Grayscale', self, triggered=self._open_file))
+        menuCore_Operations.addAction(QtGui.QAction('&Grayscale', self, triggered=self._grayscale))
         menuCore_Operations.addAction(QtGui.QAction('Ordered &Dithering', self, triggered=self._open_file))
         menuCore_Operations.addAction(QtGui.QAction('&Auto Leveling', self, triggered=self._open_file))
         menuCore_Operations.addSeparator()
@@ -94,7 +94,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         #                                                      "BMP Files (*.bmp);;All Files (*)")
         file_name = "input/image1.bmp"
         if file_name:
-            self.raw_img, height, width = self.core.read_image(file_name)
+            self.raw_img, height, width = File.open_image(file_name)
             qimage = QtGui.QImage(self.raw_img, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
 
             self.image_viewer.setPixmap(
@@ -105,6 +105,15 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_thumbnail.width() * 0.9),
                                                        int(self.image_thumbnail.height() * 0.9),
                                                        aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
+
+    def _grayscale(self):
+        gray, height, width = Color.convert_to_grayscale(self.raw_img)
+        qimage = QtGui.QImage(gray, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
+
+        self.image_viewer.setPixmap(
+            QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
+                                                   int(self.image_viewer.height() * 0.9),
+                                                   aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio))
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Type.Resize:

@@ -1,9 +1,14 @@
 from PIL import Image
 from PIL import ImageEnhance
 
+import numpy as np
 
-def convert_to_grayscale(image):
-    return image.convert("L")
+
+def convert_to_grayscale(image: np.ndarray):
+    weights = [0.2989, 0.5870, 0.1140]  # RGB weights
+    gray_intensity = np.dot(image[..., :3], weights).astype(np.uint8)
+    gray = np.stack((gray_intensity,) * 3, axis=-1)
+    return np.require(gray, np.uint8, 'C'), gray.shape[0], gray.shape[1]
 
 
 def adjust_brightness(image, factor):
