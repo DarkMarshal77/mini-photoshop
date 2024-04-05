@@ -29,7 +29,3 @@ def open_image(file_path):
                 img[0].append([r, g, b])
 
     return np.array(img, dtype=np.float32)
-
-
-def save_as(image, path, format):
-    pass

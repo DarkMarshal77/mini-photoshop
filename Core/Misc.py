@@ -58,7 +58,10 @@ def huffman_encode(gray_image: np.ndarray):
 
 def blur(image: np.ndarray, degree: int):
     k = degree // 2
-    padded = np.zeros((image.shape[0] + k * 2, image.shape[1] + k * 2, image.shape[2]))
+    if len(image.shape) == 3:
+        padded = np.zeros((image.shape[0] + k * 2, image.shape[1] + k * 2, image.shape[2]))
+    else:
+        padded = np.zeros((image.shape[0] + k * 2, image.shape[1] + k * 2))
     padded[k:-k, k:-k] = image
 
     idx1 = np.arange(k, padded.shape[0] - k, dtype=int)
