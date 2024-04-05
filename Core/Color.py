@@ -5,9 +5,8 @@ import numpy as np
 
 
 def convert_to_grayscale(image: np.ndarray):
-    weights = [0.2989, 0.5870, 0.1140]  # RGB weights
-    gray_intensity = np.dot(image[..., :3], weights).astype(np.uint8)
-    gray = np.stack((gray_intensity,) * 3, axis=-1)
+    weights = [0.299, 0.587, 0.114]  # RGB weights
+    gray = np.dot(image[..., :3], weights).astype(np.uint8)
     return np.require(gray, np.uint8, 'C'), gray.shape[0], gray.shape[1]
 
 
