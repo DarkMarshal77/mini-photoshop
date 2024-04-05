@@ -28,7 +28,7 @@ def open_image(file_path):
                 r = btoi(img_file.read(1))
                 img[0].append([r, g, b])
 
-    return np.require(img, np.uint8, 'C'), height, width
+    return np.array(img, dtype=np.float32)
 
 
 def save_as(image, path, format):

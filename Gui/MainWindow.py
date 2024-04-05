@@ -1,6 +1,7 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
 
 from Core import File, Color, Misc, Enhancement
+from Gui import Modules
 
 MAX_DITHER_LEVEL = 5
 
@@ -13,15 +14,19 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.resize(800, 615)
         self.installEventFilter(self)
 
+        self.raw_img = None
+        self.gray_img = None
+        self.error_handler = Modules.Error(self)
+        self.image_viewer = Modules.ImageViewer(self, (QtWidgets.QFrame.Shape.Box, 4))
+        self.image_thumbnail = Modules.ImageViewer(self, (QtWidgets.QFrame.Shape.StyledPanel, 0))
+
         self._create_menubar()
         self._create_central()
 
-        self.raw_img = None
-        self.gray_img = None
-
         self.show()
         self._open_file()
-        self._blur()
+        self._auto_level()
+        self._hist_equal()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -31,28 +36,17 @@ class MyMainWindow(QtWidgets.QMainWindow):
         # create top widget
         top_widget = QtWidgets.QWidget(self)
         top_layout = QtWidgets.QHBoxLayout(top_widget)
-        top_layout.addWidget(self._add_image_viewer(), stretch=5)
+        top_layout.addWidget(self.image_viewer, stretch=5)
         top_layout.addWidget(self._add_side_panel(), stretch=1)
 
         central_layout.addWidget(top_widget, stretch=4)
         central_layout.addWidget(self._add_terminal(), stretch=1)
-
-    def _add_image_viewer(self):
-        self.image_viewer = QtWidgets.QLabel(self)
-        self.image_viewer.setFrameShape(QtWidgets.QFrame.Shape.Box)
-        self.image_viewer.setLineWidth(4)
-        self.image_viewer.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        return self.image_viewer
 
     def _add_side_panel(self):
         side_widget = QtWidgets.QWidget(self)
         side_layout = QtWidgets.QVBoxLayout(side_widget)
 
         # thumbnail
-        self.image_thumbnail = QtWidgets.QLabel(self)
-        self.image_thumbnail.setFrameShape(QtWidgets.QFrame.Shape.StyledPanel)
-        # self.image_thumbnail.setLineWidth(10)
-        self.image_thumbnail.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         side_layout.addWidget(self.image_thumbnail, stretch=1)
 
         # controls
@@ -116,110 +110,47 @@ class MyMainWindow(QtWidgets.QMainWindow):
         file_name = "input/image1.bmp"
         if file_name:
             self.gray_img = None
-            self.raw_img, height, width = File.open_image(file_name)
-            qimage = QtGui.QImage(self.raw_img, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
+            self.raw_img = File.open_image(file_name)
 
-            self.image_viewer.setPixmap(
-                QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                       int(self.image_viewer.height() * 0.9),
-                                                       aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                       transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-            self.image_thumbnail.setPixmap(
-                QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_thumbnail.width() * 0.9),
-                                                       int(self.image_thumbnail.height() * 0.9),
-                                                       aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                       transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-
-    # def _handle_colored_op(self, f):
-    #     self._clear_layout(self.controllers_layout)
-    #
-    #     result, height, width = f(self.raw_img)
-    #     qimage = QtGui.QImage(result, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
-    #     self.image_viewer.setPixmap(
-    #         QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-    #                                                int(self.image_viewer.height() * 0.9),
-    #                                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-    #                                                transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-    #
-    # def _handle_gray_op(self, f):
-    #     self._clear_layout(self.controllers_layout)
-    #
-    #     if not self.gray_img:
-    #         self.gray_img, _, _ = Color.convert_to_grayscale(self.raw_img)
-    #     result, height, width = f(self.gray_img)
-    #     qimage = QtGui.QImage(result, width, height, 1 * width, QtGui.QImage.Format.Format_Grayscale8)
-    #     self.image_viewer.setPixmap(
-    #         QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-    #                                                int(self.image_viewer.height() * 0.9),
-    #                                                aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-    #                                                transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-
-    def _grayscale(self):
-        self._clear_layout(self.controllers_layout)
-
-        self.gray_img, height, width = Color.convert_to_grayscale(self.raw_img)
-        qimage = QtGui.QImage(self.gray_img, width, height, 1 * width, QtGui.QImage.Format.Format_Grayscale8)
-
-        self.image_viewer.setPixmap(
-            QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                   int(self.image_viewer.height() * 0.9),
-                                                   aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                   transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
+            self.image_viewer.display_colored(self.raw_img)
+            self.image_thumbnail.display_colored(self.raw_img)
 
     def _auto_level(self):
-        self._clear_layout(self.controllers_layout)
-
-        leveled, height, width = Enhancement.auto_level(self.raw_img)
-        qimage = QtGui.QImage(leveled, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
-
-        self.image_viewer.setPixmap(
-            QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                   int(self.image_viewer.height() * 0.9),
-                                                   aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                   transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
+        if self.raw_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.image_viewer.display_colored(Enhancement.auto_level(self.raw_img))
+        else:
+            self.error_handler.error("Please choose an image first!")
 
     def _hist_equal(self):
-        self._clear_layout(self.controllers_layout)
+        if self.raw_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.image_viewer.display_colored(Enhancement.histogram_equalization(self.raw_img))
+        else:
+            self.error_handler.error("Please choose an image first!")
 
-        leveled, height, width = Enhancement.histogram_equalization(self.raw_img)
-        qimage = QtGui.QImage(leveled, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
-
-        self.image_viewer.setPixmap(
-            QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                   int(self.image_viewer.height() * 0.9),
-                                                   aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                   transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
+    def _grayscale(self):
+        if self.raw_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.gray_img = Color.convert_to_grayscale(self.raw_img)
+            self.image_viewer.display_gray(self.gray_img)
+        else:
+            self.error_handler.error("Please choose an image first!")
 
     def _blur(self):
-        self._clear_layout(self.controllers_layout)
-
-        if not self.gray_img:
-            self.gray_img, _, _ = Color.convert_to_grayscale(self.raw_img)
-        leveled, height, width = Misc.blur(self.raw_img)
-        qimage = QtGui.QImage(leveled, width, height, 3 * width, QtGui.QImage.Format.Format_RGB888)
-
-        self.image_viewer.setPixmap(
-            QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                   int(self.image_viewer.height() * 0.9),
-                                                   aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                   transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-
-    def dummy(self, a):
-        print(a)
+        if self.gray_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.image_viewer.display_gray(Misc.blur(self.gray_img))
+        else:
+            self.error_handler.error("Please produce gray image first!")
 
     def _dithering(self):
         def perform(level):
-            if not self.gray_img:
-                self.gray_img, _, _ = Color.convert_to_grayscale(self.raw_img)
-            dithered, height, width = Misc.ordered_dither(self.gray_img, level)
-            qimage = QtGui.QImage(dithered, width, height, 1 * width, QtGui.QImage.Format.Format_Grayscale8)
-
-            self.image_viewer.setPixmap(
-                QtGui.QPixmap.fromImage(qimage).scaled(int(self.image_viewer.width() * 0.9),
-                                                       int(self.image_viewer.height() * 0.9),
-                                                       aspectRatioMode=QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                                       transformMode=QtCore.Qt.TransformationMode.SmoothTransformation))
-            self.terminal.setText(f"Dithering level {level}")
+            if self.gray_img is not None:
+                self.image_viewer.display_gray(Misc.ordered_dither(self.gray_img, level))
+                self.terminal.setText(f"Dithering level {level}")
+            else:
+                self.error_handler.error("Please produce gray image first!")
 
         self._clear_layout(self.controllers_layout)
 
@@ -251,12 +182,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.controllers_layout.addItem(verticalSpacer)
 
     def _huffman(self):
-        self._clear_layout(self.controllers_layout)
-
-        if not self.gray_img:
-            self.gray_img, _, _ = Color.convert_to_grayscale(self.raw_img)
-        entropy, code_len = Misc.huffman_encode(self.gray_img)
-        self.terminal.setText(f"Entropy: {entropy:.3f}\nAverage Huffman Code Length: {code_len:.3f}")
+        if self.gray_img is not None:
+            self._clear_layout(self.controllers_layout)
+            entropy, code_len = Misc.huffman_encode(self.gray_img)
+            self.terminal.setText(f"Entropy: {entropy:.3f}\nAverage Huffman Code Length: {code_len:.3f}")
+        else:
+            self.error_handler.error("Please produce gray image first!")
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Type.Resize:

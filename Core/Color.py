@@ -5,9 +5,7 @@ import numpy as np
 
 
 def convert_to_grayscale(image: np.ndarray):
-    weights = [0.299, 0.587, 0.114]  # RGB weights
-    gray = np.dot(image[..., :3], weights).astype(np.uint8)
-    return np.require(gray, np.uint8, 'C'), gray.shape[0], gray.shape[1]
+    return np.dot(image[..., :3], [0.299, 0.587, 0.114])
 
 
 def adjust_brightness(image, factor):

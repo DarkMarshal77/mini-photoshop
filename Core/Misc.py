@@ -19,7 +19,7 @@ def ordered_dither(gray_image: np.ndarray, level: int = 4):
             return (1 / n ** 2) * np.concatenate((first_col, second_col), axis=1)
 
     n = 2 ** level
-    dithered = gray_image.copy()
+    dithered = gray_image.astype(np.uint8).copy()
     bayer_matrix = get_bayer_matrix(n) * 256
     for x in range(dithered.shape[0]):
         i = x % n
@@ -30,11 +30,11 @@ def ordered_dither(gray_image: np.ndarray, level: int = 4):
             else:
                 dithered[x][y] = 0
 
-    return np.require(dithered, np.uint8, 'C'), dithered.shape[0], dithered.shape[1]
+    return dithered
 
 
 def huffman_encode(gray_image: np.ndarray):
-    values = gray_image.flatten()
+    values = gray_image.astype(np.uint8).flatten()
     pixel_count = Counter(values)
     p = np.array(list(pixel_count.values())) / len(values)
     entropy = -np.sum(p * np.log2(p))
@@ -65,4 +65,4 @@ def blur(image: np.ndarray):
 
     blurred_image = cv2.GaussianBlur(image, (9, 9), 0)
 
-    return blurred_image, blurred_image.shape[0], blurred_image.shape[1]
+    return blurred_image
