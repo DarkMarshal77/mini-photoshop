@@ -1,26 +1,26 @@
-from PIL import Image
-from PIL import ImageEnhance
-
 import numpy as np
+import cv2
 
 
 def convert_to_grayscale(image: np.ndarray):
     return np.dot(image[..., :3], [0.299, 0.587, 0.114])
 
 
-def adjust_brightness(image, factor):
-    enhancer = ImageEnhance.Brightness(image)
-    return enhancer.enhance(factor)
+def adjust_brightness(image, factor: float):
+    ycc = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_RGB2YCrCb)
+    ycc[..., 0] = np.clip(ycc[..., 0] * factor, 0, 255).astype(np.uint8)
+    return cv2.cvtColor(ycc, cv2.COLOR_YCrCb2RGB)
 
 
-def adjust_contrast(image, factor):
-    enhancer = ImageEnhance.Contrast(image)
-    return enhancer.enhance(factor)
+def adjust_contrast(image: np.ndarray, factor: float):
+    ycc = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_RGB2YCrCb)
+    ycc[..., 0] = np.clip(128 + ycc[..., 0] * factor - factor * 128, 0, 255).astype(np.uint8)
+    return cv2.cvtColor(ycc, cv2.COLOR_YCrCb2RGB)
 
 
-def adjust_color_balance(image, red_factor, green_factor, blue_factor):
-    r, g, b = image.split()
-    r = r.point(lambda p: p * red_factor)
-    g = g.point(lambda p: p * green_factor)
-    b = b.point(lambda p: p * blue_factor)
-    return Image.merge("RGB", (r, g, b))
+def adjust_color_balance(image: np.ndarray, red_factor: float, green_factor: float, blue_factor: float):
+    adjusted = image.copy()
+    adjusted[..., 0] = np.clip(adjusted[..., 0] * red_factor, 0, 255).astype(np.uint8)
+    adjusted[..., 1] = np.clip(adjusted[..., 1] * green_factor, 0, 255).astype(np.uint8)
+    adjusted[..., 2] = np.clip(adjusted[..., 2] * blue_factor, 0, 255).astype(np.uint8)
+    return adjusted

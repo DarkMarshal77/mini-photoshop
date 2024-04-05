@@ -27,7 +27,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.show()
         self._open_file()
         self._grayscale()
-        self._blur()
+        self._color_balance()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -88,9 +88,12 @@ class MyMainWindow(QtWidgets.QMainWindow):
         menuCore_Operations.addAction(QtGui.QAction('&Exit', self, triggered=self.close))
 
         menuOptional_Operations = menubar.addMenu('&Optional Operations')
-        menuOptional_Operations.addAction(QtGui.QAction('&Histogram Equalization', self, triggered=self._hist_equal))
         menuOptional_Operations.addAction(QtGui.QAction('&Blur', self, triggered=self._blur))
-        menuOptional_Operations.addAction(QtGui.QAction('&dummy', self, triggered=lambda: self.dummy(4)))
+        menuOptional_Operations.addSeparator()
+        menuOptional_Operations.addAction(QtGui.QAction('&Histogram Equalization', self, triggered=self._hist_equal))
+        menuOptional_Operations.addAction(QtGui.QAction('&Adjust Brightness', self, triggered=self._brightness))
+        menuOptional_Operations.addAction(QtGui.QAction('&Adjust Contrast', self, triggered=self._contrast))
+        menuOptional_Operations.addAction(QtGui.QAction('&Adjust Color', self, triggered=self._color_balance))
         menuOptional_Operations.addSeparator()
 
     def _clear_layout(self, layout: QtWidgets.QLayout):
@@ -134,7 +137,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         def perform(degree):
             if self.raw_img is not None:
                 self.image_viewer.display_colored(Misc.blur(self.raw_img, degree))
-                self.terminal.setText(f"Blur degree {degree//2}")
+                self.terminal.setText(f"Blur degree {degree // 2}")
             else:
                 self.error_handler.error("Please choose an image first!")
 
@@ -166,6 +169,121 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.controllers_layout.addWidget(slider, 0, 0)  # Add slider at row 0, column 0
         self.controllers_layout.addLayout(ticks_layout, 1, 0)  # Add slider at row 0, column 0
         self.controllers_layout.addWidget(button, 2, 0)  # Add button at row 1, column 0
+        self.controllers_layout.addItem(verticalSpacer)
+
+    def _brightness(self):
+        def perform(factor):
+            if self.raw_img is not None:
+                self.image_viewer.display_colored(Color.adjust_brightness(self.raw_img, factor))
+            else:
+                self.error_handler.error("Please choose an image first!")
+
+        self._clear_layout(self.controllers_layout)
+
+        # Create a slider widget
+        slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self)
+        slider.setRange(0, 200)
+        slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        slider.setTickInterval(50)
+        slider.setValue(100)
+
+        # Create a horizontal layout for the tick value labels
+        ticks_layout = QtWidgets.QHBoxLayout()
+        for i in range(-100, 101, 100):
+            label = QtWidgets.QLabel(f'{i}%')
+            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)  # Center align text
+            ticks_layout.addWidget(label, stretch=1)
+
+        # Create a button widget
+        button = QtWidgets.QPushButton('OK')
+        button.clicked.connect(lambda: perform(slider.value() / 100))
+
+        # spacer
+        verticalSpacer = QtWidgets.QSpacerItem(20, 220, QtWidgets.QSizePolicy.Policy.Minimum,
+                                               QtWidgets.QSizePolicy.Policy.Expanding)
+
+        # Add the slider and button to the grid layout
+        self.controllers_layout.addWidget(slider, 0, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addLayout(ticks_layout, 1, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addWidget(button, 2, 0)  # Add button at row 1, column 0
+        self.controllers_layout.addItem(verticalSpacer)
+
+    def _contrast(self):
+        def perform(factor):
+            if self.raw_img is not None:
+                self.image_viewer.display_colored(Color.adjust_contrast(self.raw_img, factor))
+            else:
+                self.error_handler.error("Please choose an image first!")
+
+        self._clear_layout(self.controllers_layout)
+
+        # Create a slider widget
+        slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self)
+        slider.setRange(0, 200)
+        slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        slider.setTickInterval(50)
+        slider.setValue(100)
+
+        # Create a horizontal layout for the tick value labels
+        ticks_layout = QtWidgets.QHBoxLayout()
+        for i in range(-100, 101, 100):
+            label = QtWidgets.QLabel(f'{i}%')
+            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)  # Center align text
+            ticks_layout.addWidget(label, stretch=1)
+
+        # Create a button widget
+        button = QtWidgets.QPushButton('OK')
+        button.clicked.connect(lambda: perform(slider.value() / 100))
+
+        # spacer
+        verticalSpacer = QtWidgets.QSpacerItem(20, 220, QtWidgets.QSizePolicy.Policy.Minimum,
+                                               QtWidgets.QSizePolicy.Policy.Expanding)
+
+        # Add the slider and button to the grid layout
+        self.controllers_layout.addWidget(slider, 0, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addLayout(ticks_layout, 1, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addWidget(button, 2, 0)  # Add button at row 1, column 0
+        self.controllers_layout.addItem(verticalSpacer)
+
+    def _color_balance(self):
+        def perform(r, g, b):
+            if self.raw_img is not None:
+                self.image_viewer.display_colored(Color.adjust_color_balance(self.raw_img, r, g, b))
+            else:
+                self.error_handler.error("Please choose an image first!")
+
+        self._clear_layout(self.controllers_layout)
+
+        # Create a slider widget
+        sliders, ticks_layouts, labels = [], [], ['R', 'G', 'B']
+        for _ in range(3):
+            sliders.append(QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self))
+            sliders[-1].setRange(0, 200)
+            sliders[-1].setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+            sliders[-1].setTickInterval(50)
+            sliders[-1].setValue(100)
+
+            # Create a horizontal layout for the tick value labels
+            ticks_layouts.append(QtWidgets.QHBoxLayout())
+            for i in range(-100, 101, 100):
+                label = QtWidgets.QLabel(f'{i}%')
+                label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)  # Center align text
+                ticks_layouts[-1].addWidget(label, stretch=1)
+
+        # Create a button widget
+        button = QtWidgets.QPushButton('OK')
+        button.clicked.connect(lambda: perform(*tuple([s.value() / 100 for s in sliders])))
+
+        # spacer
+        verticalSpacer = QtWidgets.QSpacerItem(20, 220, QtWidgets.QSizePolicy.Policy.Minimum,
+                                               QtWidgets.QSizePolicy.Policy.Expanding)
+
+        # Add the sliders and button to the grid layout
+        for i in range(3):
+            self.controllers_layout.addWidget(QtWidgets.QLabel(labels[i]), i * 2, 0)
+            self.controllers_layout.addWidget(sliders[i], i * 2, 1)
+            self.controllers_layout.addLayout(ticks_layouts[i], i * 2 + 1, 1)
+        self.controllers_layout.addWidget(button, 6, 0, 1, 0)
         self.controllers_layout.addItem(verticalSpacer)
 
     def _grayscale(self):
