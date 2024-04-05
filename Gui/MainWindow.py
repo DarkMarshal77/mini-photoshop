@@ -15,18 +15,19 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.resize(800, 615)
         self.installEventFilter(self)
 
-        self.raw_img = None
+        self.original_img = None
         self.gray_img = None
+        self.state = Modules.State(5)
+
         self.error_handler = Modules.Error(self)
         self.image_viewer = Modules.ImageViewer(self, (QtWidgets.QFrame.Shape.Box, 4))
         self.image_thumbnail = Modules.ImageViewer(self, (QtWidgets.QFrame.Shape.StyledPanel, 0))
 
         self._create_menubar()
+        self._create_toolbar()
         self._create_central()
 
         self.show()
-        self._open_file()
-        self._grayscale()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -72,6 +73,13 @@ class MyMainWindow(QtWidgets.QMainWindow):
                         """)
         return self.terminal
 
+    def _create_toolbar(self):
+        toolbar = QtWidgets.QToolBar()
+        toolbar.addAction(QtGui.QAction('&Undo', self, triggered=self._undo))
+        toolbar.addAction(QtGui.QAction('&Redo', self, triggered=self._redo))
+        toolbar.addAction(QtGui.QAction('&Reset', self, triggered=self._reset))
+        self.addToolBar(toolbar)
+
     def _create_menubar(self):
         menubar = self.menuBar()
 
@@ -102,6 +110,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         menuFlip.addAction(QtGui.QAction('&Harizontal', self, triggered=lambda: self._flip(False)))
 
     def _clear_layout(self, layout: QtWidgets.QLayout):
+        self.terminal.clear()
         while layout.count():
             c = layout.takeAt(0)
             if c.widget():
@@ -112,36 +121,59 @@ class MyMainWindow(QtWidgets.QMainWindow):
                 assert c.spacerItem()
                 layout.removeItem(c.spacerItem())
 
+    def _undo(self):
+        self.terminal.clear()
+        if self.original_img is not None:
+            self.image_viewer.set_image(self.state.undo())
+
+    def _redo(self):
+        self.terminal.clear()
+        if self.original_img is not None:
+            self.image_viewer.set_image(self.state.redo())
+
+    def _reset(self):
+        self._clear_layout(self.controllers_layout)
+        self.state.reset()
+        if self.original_img is not None:
+            self.state.add_state(self.original_img.copy())
+            self.image_viewer.set_image(self.original_img)
+
     def _open_file(self):
         self._clear_layout(self.controllers_layout)
         # file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
         #                                                      "BMP Files (*.bmp);;All Files (*)")
-        file_name = "input/image2.bmp"
+        file_name = "input/image1.bmp"
         if file_name:
-            self.gray_img = None
-            self.raw_img = File.open_image(file_name)
+            self.original_img = File.open_image(file_name)
+            self.gray_img = Color.convert_to_grayscale(self.original_img)
 
-            self.image_viewer.display_colored(self.raw_img)
-            self.image_thumbnail.display_colored(self.raw_img)
+            self.state.reset()
+            self.state.add_state(self.original_img.copy())
+
+            self.image_viewer.set_image(self.state.get_state())
+            self.image_thumbnail.set_image(self.state.get_state())
 
     def _auto_level(self):
-        if self.raw_img is not None:
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
-            self.image_viewer.display_colored(Enhancement.auto_level(self.raw_img))
+            self.state.add_state(Enhancement.auto_level(self.state.get_state()))
+            self.image_viewer.set_image(self.state.get_state())
         else:
             self.error_handler.error("Please choose an image first!")
 
     def _hist_equal(self):
-        if self.raw_img is not None:
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
-            self.image_viewer.display_colored(Enhancement.histogram_equalization(self.raw_img))
+            self.state.add_state(Enhancement.histogram_equalization(self.state.get_state()))
+            self.image_viewer.set_image(self.state.get_state())
         else:
             self.error_handler.error("Please choose an image first!")
 
     def _blur(self):
         def perform(degree):
-            if self.raw_img is not None:
-                self.image_viewer.display_colored(Misc.blur(self.raw_img, degree))
+            if len(self.state):
+                self.state.add_state(Misc.blur(self.state.get_state(), degree))
+                self.image_viewer.set_image(self.state.get_state())
                 self.terminal.setText(f"Blur degree {degree // 2}")
             else:
                 self.error_handler.error("Please choose an image first!")
@@ -178,8 +210,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def _brightness(self):
         def perform(factor):
-            if self.raw_img is not None:
-                self.image_viewer.display_colored(Color.adjust_brightness(self.raw_img, factor))
+            if len(self.state):
+                self.state.add_state(Color.adjust_brightness(self.state.get_state(), factor))
+                self.image_viewer.set_image(self.state.get_state())
             else:
                 self.error_handler.error("Please choose an image first!")
 
@@ -215,8 +248,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def _contrast(self):
         def perform(factor):
-            if self.raw_img is not None:
-                self.image_viewer.display_colored(Color.adjust_contrast(self.raw_img, factor))
+            if len(self.state):
+                self.state.add_state(Color.adjust_contrast(self.state.get_state(), factor))
+                self.image_viewer.set_image(self.state.get_state())
             else:
                 self.error_handler.error("Please choose an image first!")
 
@@ -252,8 +286,9 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def _color_balance(self):
         def perform(r, g, b):
-            if self.raw_img is not None:
-                self.image_viewer.display_colored(Color.adjust_color_balance(self.raw_img, r, g, b))
+            if len(self.state):
+                self.state.add_state(Color.adjust_color_balance(self.state.get_state(), r, g, b))
+                self.image_viewer.set_image(self.state.get_state())
             else:
                 self.error_handler.error("Please choose an image first!")
 
@@ -292,34 +327,37 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.controllers_layout.addItem(verticalSpacer)
 
     def _rot(self, clockwise: bool):
-        if self.raw_img is not None:
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
-            self.image_viewer.display_colored(Geometry.rotate(self.raw_img, clockwise))
+            self.state.add_state(Geometry.rotate(self.state.get_state(), clockwise))
+            self.image_viewer.set_image(self.state.get_state())
         else:
             self.error_handler.error("Please choose an image first!")
 
-    def _flip(self, v: bool):
-        if self.raw_img is not None:
+    def _flip(self, vertical: bool):
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
-            self.image_viewer.display_colored(Geometry.flip(self.raw_img, v))
+            self.state.add_state(Geometry.flip(self.state.get_state(), vertical))
+            self.image_viewer.set_image(self.state.get_state())
         else:
             self.error_handler.error("Please choose an image first!")
 
     def _grayscale(self):
-        if self.raw_img is not None:
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
-            self.gray_img = Color.convert_to_grayscale(self.raw_img)
-            self.image_viewer.display_gray(self.gray_img)
+            self.state.add_state(Color.convert_to_grayscale(self.state.get_state()))
+            self.image_viewer.set_image(self.state.get_state())
         else:
             self.error_handler.error("Please choose an image first!")
 
     def _dithering(self):
         def perform(level):
-            if self.gray_img is not None:
-                self.image_viewer.display_gray(Misc.ordered_dither(self.gray_img, level))
+            if len(self.state):
+                self.state.add_state(Misc.ordered_dither(self.gray_img, level))
+                self.image_viewer.set_image(self.state.get_state())
                 self.terminal.setText(f"Dithering level {level}")
             else:
-                self.error_handler.error("Please produce gray image first!")
+                self.error_handler.error("Please choose an image first!")
 
         self._clear_layout(self.controllers_layout)
 
@@ -352,12 +390,14 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.controllers_layout.addItem(verticalSpacer)
 
     def _huffman(self):
-        if self.gray_img is not None:
+        if len(self.state):
             self._clear_layout(self.controllers_layout)
             entropy, code_len = Misc.huffman_encode(self.gray_img)
+            self.state.add_state(self.gray_img.copy())
+            self.image_viewer.set_image(self.state.get_state())
             self.terminal.setText(f"Entropy: {entropy:.3f}\nAverage Huffman Code Length: {code_len:.3f}")
         else:
-            self.error_handler.error("Please produce gray image first!")
+            self.error_handler.error("Please choose an image first!")
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Type.Resize:
