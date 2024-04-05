@@ -56,13 +56,17 @@ def huffman_encode(gray_image: np.ndarray):
     return entropy, average_code_length
 
 
-def blur(image: np.ndarray):
-    k = 4
-    # blurred_image = np.zeros_like(image)
-    # for i in range(k, image.shape[0] - k):
-    #     for j in range(k, image.shape[1] - k):
-    #         blurred_image[i, j] = np.average(image[i - k:i + k, j - k:j + k])
+def blur(image: np.ndarray, degree: int):
+    k = degree // 2
+    padded = np.zeros((image.shape[0] + k * 2, image.shape[1] + k * 2, image.shape[2]))
+    padded[k:-k, k:-k] = image
 
-    blurred_image = cv2.GaussianBlur(image, (9, 9), 0)
+    idx1 = np.arange(k, padded.shape[0] - k, dtype=int)
+    idx2 = np.arange(k, padded.shape[1] - k, dtype=int)
 
-    return blurred_image
+    tmp = np.zeros_like(image)
+    for i in range(-k, k + 1):
+        for j in range(-k, k + 1):
+            tmp += padded[idx1 + i, :][:, idx2 + j]
+
+    return tmp / (degree ** 2)

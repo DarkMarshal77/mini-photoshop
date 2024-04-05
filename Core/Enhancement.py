@@ -12,10 +12,6 @@ def auto_level(image: np.ndarray):
     return cv2.cvtColor(ycc, cv2.COLOR_YCrCb2RGB)
 
 
-def sharpen(image):
-    pass
-
-
 def histogram_equalization(image: np.ndarray):
     ycc = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_RGB2YCrCb)
 

@@ -4,6 +4,7 @@ from Core import File, Color, Misc, Enhancement
 from Gui import Modules
 
 MAX_DITHER_LEVEL = 5
+MAX_FILTER_DEGREE = 5
 
 
 # noinspection PyUnresolvedReferences
@@ -25,8 +26,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         self.show()
         self._open_file()
-        self._auto_level()
-        self._hist_equal()
+        self._grayscale()
+        self._blur()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -129,6 +130,44 @@ class MyMainWindow(QtWidgets.QMainWindow):
         else:
             self.error_handler.error("Please choose an image first!")
 
+    def _blur(self):
+        def perform(degree):
+            if self.raw_img is not None:
+                self.image_viewer.display_colored(Misc.blur(self.raw_img, degree))
+                self.terminal.setText(f"Blur degree {degree//2}")
+            else:
+                self.error_handler.error("Please choose an image first!")
+
+        self._clear_layout(self.controllers_layout)
+
+        # Create a slider widget
+        slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal, self)
+        slider.setRange(1, MAX_FILTER_DEGREE)
+        slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        slider.setTickInterval(1)
+        slider.setValue(MAX_FILTER_DEGREE // 2 + 1)
+
+        # Create a horizontal layout for the tick value labels
+        ticks_layout = QtWidgets.QHBoxLayout()
+        for i in range(1, MAX_FILTER_DEGREE + 1):
+            label = QtWidgets.QLabel(str(i))
+            label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)  # Center align text
+            ticks_layout.addWidget(label, stretch=1)
+
+        # Create a button widget
+        button = QtWidgets.QPushButton('OK')
+        button.clicked.connect(lambda: perform(slider.value() * 2 + 1))
+
+        # spacer
+        verticalSpacer = QtWidgets.QSpacerItem(20, 220, QtWidgets.QSizePolicy.Policy.Minimum,
+                                               QtWidgets.QSizePolicy.Policy.Expanding)
+
+        # Add the slider and button to the grid layout
+        self.controllers_layout.addWidget(slider, 0, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addLayout(ticks_layout, 1, 0)  # Add slider at row 0, column 0
+        self.controllers_layout.addWidget(button, 2, 0)  # Add button at row 1, column 0
+        self.controllers_layout.addItem(verticalSpacer)
+
     def _grayscale(self):
         if self.raw_img is not None:
             self._clear_layout(self.controllers_layout)
@@ -136,13 +175,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.image_viewer.display_gray(self.gray_img)
         else:
             self.error_handler.error("Please choose an image first!")
-
-    def _blur(self):
-        if self.gray_img is not None:
-            self._clear_layout(self.controllers_layout)
-            self.image_viewer.display_gray(Misc.blur(self.gray_img))
-        else:
-            self.error_handler.error("Please produce gray image first!")
 
     def _dithering(self):
         def perform(level):
@@ -159,6 +191,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         slider.setRange(1, MAX_DITHER_LEVEL)
         slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
         slider.setTickInterval(1)
+        slider.setValue(4)
 
         # Create a horizontal layout for the tick value labels
         ticks_layout = QtWidgets.QHBoxLayout()
@@ -168,7 +201,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             ticks_layout.addWidget(label, stretch=1)
 
         # Create a button widget
-        button = QtWidgets.QPushButton('Click Me')
+        button = QtWidgets.QPushButton('OK')
         button.clicked.connect(lambda: perform(slider.value()))
 
         # spacer
