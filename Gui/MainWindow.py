@@ -1,6 +1,6 @@
 from PyQt6 import QtWidgets, QtGui, QtCore
 
-from Core import File, Color, Misc, Enhancement
+from Core import File, Color, Misc, Enhancement, Geometry
 from Gui import Modules
 
 MAX_DITHER_LEVEL = 5
@@ -27,7 +27,6 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self.show()
         self._open_file()
         self._grayscale()
-        self._color_balance()
 
     def _create_central(self):
         central_widget = QtWidgets.QWidget(self)
@@ -89,12 +88,18 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         menuOptional_Operations = menubar.addMenu('&Optional Operations')
         menuOptional_Operations.addAction(QtGui.QAction('&Blur', self, triggered=self._blur))
-        menuOptional_Operations.addSeparator()
         menuOptional_Operations.addAction(QtGui.QAction('&Histogram Equalization', self, triggered=self._hist_equal))
+        menuOptional_Operations.addSeparator()
         menuOptional_Operations.addAction(QtGui.QAction('&Adjust Brightness', self, triggered=self._brightness))
         menuOptional_Operations.addAction(QtGui.QAction('&Adjust Contrast', self, triggered=self._contrast))
         menuOptional_Operations.addAction(QtGui.QAction('&Adjust Color', self, triggered=self._color_balance))
         menuOptional_Operations.addSeparator()
+        menuFlip = menuOptional_Operations.addMenu('&Rotate')
+        menuFlip.addAction(QtGui.QAction('90 Clockwise', self, triggered=lambda: self._rot(True)))
+        menuFlip.addAction(QtGui.QAction('90 Counter-Clockwise', self, triggered=lambda: self._rot(False)))
+        menuFlip = menuOptional_Operations.addMenu('&Flip')
+        menuFlip.addAction(QtGui.QAction('&Vertical', self, triggered=lambda: self._flip(True)))
+        menuFlip.addAction(QtGui.QAction('&Harizontal', self, triggered=lambda: self._flip(False)))
 
     def _clear_layout(self, layout: QtWidgets.QLayout):
         while layout.count():
@@ -111,7 +116,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
         self._clear_layout(self.controllers_layout)
         # file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
         #                                                      "BMP Files (*.bmp);;All Files (*)")
-        file_name = "input/image1.bmp"
+        file_name = "input/image2.bmp"
         if file_name:
             self.gray_img = None
             self.raw_img = File.open_image(file_name)
@@ -285,6 +290,20 @@ class MyMainWindow(QtWidgets.QMainWindow):
             self.controllers_layout.addLayout(ticks_layouts[i], i * 2 + 1, 1)
         self.controllers_layout.addWidget(button, 6, 0, 1, 0)
         self.controllers_layout.addItem(verticalSpacer)
+
+    def _rot(self, clockwise: bool):
+        if self.raw_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.image_viewer.display_colored(Geometry.rotate(self.raw_img, clockwise))
+        else:
+            self.error_handler.error("Please choose an image first!")
+
+    def _flip(self, v: bool):
+        if self.raw_img is not None:
+            self._clear_layout(self.controllers_layout)
+            self.image_viewer.display_colored(Geometry.flip(self.raw_img, v))
+        else:
+            self.error_handler.error("Please choose an image first!")
 
     def _grayscale(self):
         if self.raw_img is not None:

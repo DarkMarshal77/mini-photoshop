@@ -1,17 +1,15 @@
 from PIL import Image
+import numpy as np
 
 
-def resize_image(image, new_width, new_height):
-    return image.resize((new_width, new_height))
+def rotate(image: np.ndarray, clockwise: bool):
+    if clockwise:
+        return image.swapaxes(0, 1)[:, ::-1, :]
+    else:
+        return image.swapaxes(0, 1)[::-1, :, :]
 
 
-def crop_image(image, left, top, right, bottom):
-    return image.crop((left, top, right, bottom))
-
-
-def rotate(image):
-    return image.rotate(90)
-
-
-def flip(image):
-    return image.transpose(Image.FLIP_LEFT_RIGHT)
+def flip(image: np.ndarray, vertical: bool):
+    if vertical:
+        return image[::-1, :, :]
+    return image[:, ::-1, :]
