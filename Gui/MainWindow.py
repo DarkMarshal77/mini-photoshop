@@ -14,6 +14,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
         self.resize(800, 615)
         self.installEventFilter(self)
+        self.setWindowTitle("MiniPhotoshop")
 
         self.original_img = None
         self.gray_img = None
@@ -140,9 +141,8 @@ class MyMainWindow(QtWidgets.QMainWindow):
 
     def _open_file(self):
         self._clear_layout(self.controllers_layout)
-        # file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
-        #                                                      "BMP Files (*.bmp);;All Files (*)")
-        file_name = "input/image1.bmp"
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open BMP File", "",
+                                                             "BMP Files (*.bmp);;All Files (*)")
         if file_name:
             self.original_img = File.open_image(file_name)
             self.gray_img = Color.convert_to_grayscale(self.original_img)
@@ -213,6 +213,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             if len(self.state):
                 self.state.add_state(Color.adjust_brightness(self.state.get_state(), factor))
                 self.image_viewer.set_image(self.state.get_state())
+                self.terminal.setText(f"Brightness adjustment {(factor - 1) * 100:.0f}%")
             else:
                 self.error_handler.error("Please choose an image first!")
 
@@ -251,6 +252,7 @@ class MyMainWindow(QtWidgets.QMainWindow):
             if len(self.state):
                 self.state.add_state(Color.adjust_contrast(self.state.get_state(), factor))
                 self.image_viewer.set_image(self.state.get_state())
+                self.terminal.setText(f"Contrast adjustment {(factor - 1) * 100:.0f}%")
             else:
                 self.error_handler.error("Please choose an image first!")
 
